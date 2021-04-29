@@ -12,7 +12,9 @@ function run_resistivity_gui(io::IO)
     k_count = 50
     plate = Matrix{Float64}(undef, i_count, k_count) # resistivity
     plate .= 100 # omh-m
-    plate[10:30, 1:10] .= 1
+    plate[21:50, 1:5] .= 1
+    #plate[1:5, 1:6] .= 100
+    #plate[15:15, 20:21] .= 100
 
     plate_graph = WeightedGraph{V, WeightedEdge}()
     vertices = Vector{V}()
@@ -105,7 +107,17 @@ function resistivity_heatmap(distance_m::Matrix{Float64})
     layout = Layout(
         #width = 600,
         #height = 200,
+        annotations = [],
     )
+    annotations = layout["annotations"] # shortcut
+    annotation = Dict(
+        :x => 0,
+        :y => 0,
+        :text => "◎", #"S",
+        #:showtext => false,
+        :showarrow => false,
+    )
+    push!(annotations, annotation)
 
     return traces, layout
 end
@@ -119,7 +131,17 @@ function resistance_heatmap(distance_m::Matrix{Float64})
     layout = Layout(
         #width = 600,
         #height = 200,
+        annotations = [],
     )
+    annotations = layout["annotations"] # shortcut
+    annotation = Dict(
+        :x => 0,
+        :y => 0,
+        :text => "◎", #"S",
+        #:showtext => false,
+        :showarrow => false,
+    )
+    push!(annotations, annotation)
 
     return traces, layout
 end
