@@ -5,3 +5,7 @@ This is the driver repository for `Classic.jl` which follows the book [Classic C
 `bfs_heatmap(maze)` plots a maze solved by BFS.
 
 ![BFS](assets/solve_maze_with_bfs_50x50.png)
+
+A more dense maze.
+
+![BFS](assets/solve_maze_with_bfs_50x50_dense.png)

@@ -84,7 +84,9 @@ function run_dfs()
 end
 
 function run_bfs_gui()
-    maze = new_maze(50, 50, (1,1), (50,50), 0.2)
+    maze = nothing
+    for ind = 1:1000
+    maze = new_maze(50, 50, (1,1), (50,50), 0.40)
 
     # create functions for bfs()
     is_goal(pt)     = Classic.is_goal(maze.goal, pt)
@@ -93,13 +95,14 @@ function run_bfs_gui()
     node = bfs((1,1), is_goal, next_points)
 
     if isnothing(node)
-        println("Path not found")
-        display(maze.grid) # print the unsovled maze
+        #println("Path not found")
+        #display(maze.grid) # print the unsovled maze
     else
         mark_path!(maze.grid, node, start=maze.start, goal=maze.goal)
-        display(maze.grid) # print the maze and the path
+        #display(maze.grid) # print the maze and the path
+        break
     end
-
+    end
     app = dash(external_stylesheets=[dbc_themes.SPACELAB])
 
     navbar = dbc_navbarsimple([
