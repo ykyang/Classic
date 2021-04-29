@@ -1,69 +1,134 @@
-include("Classic.jl")
+using Test
 
-using Test 
+using Dash, DashHtmlComponents, DashCoreComponents, DashBootstrapComponents
+using PlotlyJS
+using DataFrames
 
-import .Classic
-cc = Classic
+using Classic
 
-function init!(g::cc.Graph{V,E}) where {V,E<:cc.Edge}
-    cities = Vector{String}(["Seattle", "San Francisco",  
-    "Los Angeles", "Riverside", "Phoenix", "Chicago", "Boston",
-    "New York", "Atlanta", "Miami", "Dallas", "Houston", "Detroit",
-    "Philadelphia", "Washington",
-    ])
-    
-    append!(g,cities)
+function run_resistivity_gui(io::IO)
+    V = Tuple{Int64,Int64} # Vertex type
+    i_count = 50
+    k_count = 50
+    plate = Matrix{Float64}(undef, i_count, k_count) # resistivity
+    plate .= 100 # omh-m
+    plate[10:30, 1:10] .= 1
 
-    cc.add!(g, "Seattle", "Chicago")
-    cc.add!(g, "Seattle","San Francisco")
-    cc.add!(g, "San Francisco", "Riverside")
-    cc.add!(g, "San Francisco", "Los Angeles")
-    cc.add!(g, "Los Angeles", "Riverside")
-    cc.add!(g, "Los Angeles", "Phoenix")
-    cc.add!(g, "Riverside", "Phoenix")
-    cc.add!(g, "Riverside", "Chicago")
-    cc.add!(g, "Phoenix", "Houston")
-    cc.add!(g, "Dallas", "Chicago")
-    cc.add!(g, "Dallas", "Atlanta")
-    cc.add!(g, "Dallas", "Houston")
-    cc.add!(g, "Houston", "Atlanta")
-    cc.add!(g, "Houston", "Miami")
-    cc.add!(g, "Atlanta", "Chicago")
-    cc.add!(g, "Atlanta", "Washington")
-    cc.add!(g, "Atlanta", "Miami")
-    cc.add!(g, "Miami", "Washington")
-    cc.add!(g, "Chicago", "Detroit")
-    cc.add!(g, "Detroit", "Boston")
-    cc.add!(g, "Detroit", "Washington")
-    cc.add!(g, "Detroit", "Washington")
-    cc.add!(g, "Detroit", "New York")
-    cc.add!(g, "Boston", "New York")
-    cc.add!(g, "New York", "Philadelphia")
-    cc.add!(g, "Philadelphia", "Washington")
-
-    return cities
-end
-
-function run_UnweightedGraph()
-    g = cc.UnweightedGraph{String,cc.Edge}()
-    cities = init!(g)
-    @test length(cities) == length(g.vertices)
-    @test length(cities) == length(g.edges_lists)
-   
-    for edges in g.edges_lists
-        @test !isempty(edges)
+    plate_graph = WeightedGraph{V, WeightedEdge}()
+    vertices = Vector{V}()
+    for i = 1:i_count
+        for k = 1:k_count
+            push!(vertices, (i,k))
+        end
     end
 
-    show(g)
+    append!(plate_graph, vertices)
+    A = 1.0 # cross section area
+    for i = 1:i_count # horizontal connection
+        for k = 1:k_count-1
+            resistance = 0.5*(plate[i,k] + plate[i,k+1])*A/1.0 # 1.0 is the distance
+            
+            add!(plate_graph, (i,k), (i,k+1), resistance)
+        end
+    end
+    for i = 1:i_count-1 # vertical connection
+        for k = 1:k_count
+            resistance = 0.5*(plate[i,k] + plate[i+1,k])*A/1.0 # 1.0 is the distance
+            
+            add!(plate_graph, (i,k), (i+1,k), resistance)
+        end
+    end
 
-    is_goal(pt) = cc.is_goal("Miami", pt)
-    neighbor_of(v) = cc.neighbor_of(g, v)
+    #@show plate_graph
+    dijkstra_result = dijkstra(plate_graph, (1,1))
+    @test DijkstraResult == typeof(dijkstra_result)
+    #println(io, dijkstra_result)
+    # Dict{V,Float64}
+    distance_db = distances_to_distance_db(plate_graph, dijkstra_result.distances)
+    @test Dict{V,Float64} == typeof(distance_db)
 
-    node = cc.bfs("Boston", is_goal, neighbor_of)
-    
-    println("Shortest route: $(cc.node_to_path(node))")
+    #println(io, distance_db)
 
-    nothing
+    # shortest distance from start to each point
+    distance_m = Matrix{Float64}(undef, i_count, k_count)
+    for distance in distance_db
+        #@test Pair{V,Float64} == typeof(distance)
+        distance_m[distance[1]...] = distance[2]
+    end
+
+    app = dash(external_stylesheets=[dbc_themes.SPACELAB])
+
+    navbar = dbc_navbarsimple([
+        dbc_dropdownmenu([
+            dbc_dropdownmenuitem("Resistivity", href="#resistivity", external_link=true),
+            dbc_dropdownmenuitem("Resistance", href="#resistance", external_link=true),
+            # dbc_dropdownmenuitem("", href="", external_link=true),
+        ],
+        in_navbar=true, label="Section", caret=true, direction="left"),
+    ], 
+    sticky="top", expand=true, brand="WDVG", brand_href="https://www.wdvgco.com",
+    )
+    content =[
+        dbc_container([html_h3("Resistivity", id="resistivity"),
+            dbc_badge("Line: $(@__LINE__)", color="info", className="ml-1"),
+            dcc_graph(
+                figure = Plot(resistivity_heatmap(plate)...),
+                config = Dict(),
+            )
+        ], className="p-3 my-2 border rounded"),
+        dbc_container([html_h3("Resistance", id="resistance"),
+            dbc_badge("Line: $(@__LINE__)", color="info", className="ml-1"),
+            dcc_graph(
+                figure = Plot(resistance_heatmap(distance_m)...),
+                config = Dict(),
+            )
+        ], className="p-3 my-2 border rounded"),
+    ]
+    pushfirst!(content, navbar)
+    app.layout = dbc_container(content)
+
+    run_server(
+        app, 
+        "0.0.0.0", 
+        8055, 
+        debug=true, # enables hot reload and more
+    )
+   
 end
 
-run_UnweightedGraph()
+function resistivity_heatmap(distance_m::Matrix{Float64})
+    traces = Vector{AbstractTrace}([
+        heatmap(
+            z = distance_m,
+        )
+    ])
+    layout = Layout(
+        #width = 600,
+        #height = 200,
+    )
+
+    return traces, layout
+end
+
+function resistance_heatmap(distance_m::Matrix{Float64})
+    traces = Vector{AbstractTrace}([
+        heatmap(
+            z = distance_m,
+        )
+    ])
+    layout = Layout(
+        #width = 600,
+        #height = 200,
+    )
+
+    return traces, layout
+end
+
+io = devnull
+io = stdout
+
+run_resistivity_gui(io)
+
+nothing
+
+
