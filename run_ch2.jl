@@ -84,7 +84,7 @@ function run_dfs()
 end
 
 function run_bfs_gui()
-    maze = new_maze(10, 10, (1,1), (10,10), 0.2)
+    maze = new_maze(50, 50, (1,1), (50,50), 0.2)
 
     # create functions for bfs()
     is_goal(pt)     = Classic.is_goal(maze.goal, pt)
@@ -131,7 +131,9 @@ function run_bfs_gui()
     )
 end
 
-function bfs_heatmap(maze)
+function bfs_heatmap(maze::Maze)
+    start = maze.start
+    goal = maze.goal
     z = convert(Matrix{Int64}, maze.grid)
     # z =  [[1, 20, 30], [20, 1, 60], [30, 60, 1]]
     # z = hcat(z...)
@@ -170,16 +172,16 @@ function bfs_heatmap(maze)
     )
     annotations = layout["annotations"] # shortcut
     annotation = Dict(
-        :x => 0,
-        :y => 0,
+        :x => start[1] - 1,
+        :y => start[2] - 1 ,
         :text => "", #"S",
         #:showtext => false,
         :showarrow => false,
     )
     push!(annotations, annotation)
     annotation = Dict(
-        :x => 9,
-        :y => 9,
+        :x => goal[1] - 1,
+        :y => goal[2] - 1,
         :text => "", #"G",
         :showarrow => false,
     )
