@@ -13,8 +13,9 @@ function run_resistivity_gui(io::IO)
     plate = Matrix{Float64}(undef, i_count, k_count) # resistivity
     plate .= 100 # omh-m
     #plate[1:30, 1:5] .= 1
-    plate[11:40, 1:5] .= 1
-    #plate[21:50, 1:5] .= 1
+    #plate[11:40, 1:5] .= 1
+    plate[21:50, 1:5] .= 1
+    #plate[31:60, 1:5] .= 1
     #plate[1:5, 1:6] .= 100
     #plate[15:15, 20:21] .= 100
 
