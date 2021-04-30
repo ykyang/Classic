@@ -12,7 +12,9 @@ function run_resistivity_gui(io::IO)
     k_count = 50
     plate = Matrix{Float64}(undef, i_count, k_count) # resistivity
     plate .= 100 # omh-m
-    plate[21:50, 1:5] .= 1
+    #plate[1:30, 1:5] .= 1
+    plate[11:40, 1:5] .= 1
+    #plate[21:50, 1:5] .= 1
     #plate[1:5, 1:6] .= 100
     #plate[15:15, 20:21] .= 100
 
@@ -58,12 +60,17 @@ function run_resistivity_gui(io::IO)
         distance_m[distance[1]...] = distance[2]
     end
 
+    
+    # --- GUI --- #
+
+
     app = dash(external_stylesheets=[dbc_themes.SPACELAB])
 
     navbar = dbc_navbarsimple([
         dbc_dropdownmenu([
             dbc_dropdownmenuitem("Resistivity", href="#resistivity", external_link=true),
             dbc_dropdownmenuitem("Resistance", href="#resistance", external_link=true),
+            dbc_dropdownmenuitem("Resistance bar chart", href="#resistance_bar_chart", external_link=true),
             # dbc_dropdownmenuitem("", href="", external_link=true),
         ],
         in_navbar=true, label="Section", caret=true, direction="left"),
@@ -85,6 +92,13 @@ function run_resistivity_gui(io::IO)
                 config = Dict(),
             )
         ], className="p-3 my-2 border rounded"),
+        dbc_container([html_h3("Resistance bar chart", id="resistance_bar_chart"),
+            dbc_badge("Line: $(@__LINE__)", color="info", className="ml-1"),
+            dcc_graph(
+                figure = Plot(resistance_bar_chart(distance_m)...),
+                config = Dict(),
+            )
+        ], className="p-3 my-2 border rounded"),
     ]
     pushfirst!(content, navbar)
     app.layout = dbc_container(content)
@@ -102,22 +116,32 @@ function resistivity_heatmap(distance_m::Matrix{Float64})
     traces = Vector{AbstractTrace}([
         heatmap(
             z = distance_m,
+        ),
+        scatter(
+            x = [0],
+            y = [0],
+            mode = "markers",
+            marker = Dict(
+                :size => 16,
+                :color => "green",
+            )
         )
     ])
     layout = Layout(
+        title = "Resistivity",
         #width = 600,
         #height = 200,
         annotations = [],
     )
     annotations = layout["annotations"] # shortcut
-    annotation = Dict(
-        :x => 0,
-        :y => 0,
-        :text => "◎", #"S",
-        #:showtext => false,
-        :showarrow => false,
-    )
-    push!(annotations, annotation)
+    # annotation = Dict(
+    #     :x => 0,
+    #     :y => 0,
+    #     :text => "◎", #"S",
+    #     #:showtext => false,
+    #     :showarrow => false,
+    # )
+    # push!(annotations, annotation)
 
     return traces, layout
 end
@@ -126,22 +150,75 @@ function resistance_heatmap(distance_m::Matrix{Float64})
     traces = Vector{AbstractTrace}([
         heatmap(
             z = distance_m,
+        ),
+        scatter(
+            x = [0],
+            y = [0],
+            mode = "markers",
+            marker = Dict(
+                :size => 16,
+                :color => "green",
+            )
         )
     ])
     layout = Layout(
+        title = "Resistance",
         #width = 600,
         #height = 200,
         annotations = [],
     )
     annotations = layout["annotations"] # shortcut
-    annotation = Dict(
-        :x => 0,
-        :y => 0,
-        :text => "◎", #"S",
-        #:showtext => false,
-        :showarrow => false,
+    # annotation = Dict(
+    #     :x => 0,
+    #     :y => 0,
+    #     :text => "◎", #"S",
+    #     #:showtext => false,
+    #     :showarrow => false,
+    # )
+    # push!(annotations, annotation)
+
+    return traces, layout
+end
+
+function resistance_bar_chart(distance_m::Matrix{Float64})
+    bins = ["1000", "2000", "3000", "4000", "5000", "6000", ">6000"]
+    counts = []
+    count = length(findall(x -> x < 1000, distance_m))
+    push!(counts, count)
+    count = length(findall(x -> 1000 <= x < 2000, distance_m))
+    push!(counts, count)
+    count = length(findall(x -> 2000 <= x < 3000, distance_m))
+    push!(counts, count)
+    count = length(findall(x -> 3000 <= x < 4000, distance_m))
+    push!(counts, count)
+    count = length(findall(x -> 4000 <= x < 5000, distance_m))
+    push!(counts, count)
+    count = length(findall(x -> 5000 <= x < 6000, distance_m))
+    push!(counts, count)
+    count = length(findall(x -> 6000 <= x , distance_m))
+    push!(counts, count)
+
+    traces = Vector{AbstractTrace}([
+        bar(
+            x = bins,
+            y = counts,
+        )
+    ])
+    layout = Layout(
+        title = "Distribution of Resistance",
+        #width = 600,
+        #height = 200,
+        annotations = [],
     )
-    push!(annotations, annotation)
+    annotations = layout["annotations"] # shortcut
+    # annotation = Dict(
+    #     :x => 0,
+    #     :y => 0,
+    #     :text => "◎", #"S",
+    #     #:showtext => false,
+    #     :showarrow => false,
+    # )
+    # push!(annotations, annotation)
 
     return traces, layout
 end
