@@ -8,7 +8,7 @@ function run_kmeans_governor(k=2)::KMeans
     pointvec = Vector{Governor}()
     begin # add data
         push!(pointvec, Governor(-86.79113, 72, "Alabama"))
-        #push!(pointvec, Governor(-152.404419, 66, "Alaska"))
+        push!(pointvec, Governor(-152.404419, 66, "Alaska"))
         push!(pointvec, Governor(-111.431221, 53, "Arizona"))
         push!(pointvec, Governor(-92.373123, 66, "Arkansas"))
         push!(pointvec, Governor(-119.681564, 79, "California"))
@@ -17,7 +17,7 @@ function run_kmeans_governor(k=2)::KMeans
         push!(pointvec, Governor(-75.507141, 61, "Delaware"))
         push!(pointvec, Governor(-81.686783, 64, "Florida"))
         push!(pointvec, Governor(-83.643074, 74, "Georgia"))
-        #push!(pointvec, Governor(-157.498337, 60, "Hawaii"))
+        push!(pointvec, Governor(-157.498337, 60, "Hawaii"))
         push!(pointvec, Governor(-114.478828, 75, "Idaho"))
         push!(pointvec, Governor(-88.986137, 60, "Illinois"))
         push!(pointvec, Governor(-86.258278, 49, "Indiana"))
@@ -137,9 +137,87 @@ function run_kmeans_governor_gui(io::IO)
     )
 end
 
+function run_kmeans_album(io::IO, k = 2)::KMeans{Album}
+    pointvec = Vector{Album}()
+    begin
+        push!(pointvec, Album("Got to Be There", 1972, 35.45, 10.0))
+        push!(pointvec, Album("Ben", 1972, 31.31, 10.0))
+        push!(pointvec, Album("Music & Me", 1973, 32.09, 10.0))
+        push!(pointvec, Album("Forever, Michael", 1975, 33.36, 10.0))
+        push!(pointvec, Album("Off the Wall", 1979, 42.28, 10.0))
+        push!(pointvec, Album("Thriller", 1982, 42.19, 9.0))
+        push!(pointvec, Album("Bad", 1987, 48.16, 10.0))
+        push!(pointvec, Album("Dangerous", 1991, 77.03, 14.0))
+        push!(pointvec, Album("HIStory: Past, Present and Future, Book I", 1995, 148.58, 30.0))
+        push!(pointvec, Album("Invincible", 2001, 77.05, 16.0))        
+    end
+
+    kmeans = KMeans(k, pointvec)
+    it = run!(kmeans, 100)
+    println(io, "Converged at $it iterations")
+
+    for (ind,cluster) in enumerate(kmeans.clustervec)
+        println(io, "Cluster $(ind):")
+        for point in cluster.pointvec
+            println(io, "$(point.name)\t$(point.length)\t$(point.tracks)")
+        end
+    end
+
+    return kmeans
+end
+
+function run_kmeans_album_gui(io::IO)
+    cluster_count = 3
+    kmeans = run_kmeans_album(io, cluster_count)
+
+    traces_original = Vector{AbstractTrace}()
+    for i in 1:cluster_count
+        x = slice_original(kmeans.clustervec[i].pointvec,1) # dimension 1
+        y = slice_original(kmeans.clustervec[i].pointvec,2) # dimension 2
+        t = slice_name(kmeans.clustervec[i].pointvec)
+        push!(
+            traces_original, 
+            scatter(
+                x=x,y=y,
+                mode="markers",
+                text = t,
+            )
+        )
+    end
+
+
+    app = dash(external_stylesheets=[dbc_themes.SPACELAB])
+    content = [
+        dbc_container([html_h3("Clustering of albums", id="kmeans_album_original"),
+            dbc_badge("Line: $(@__LINE__)", color="info", className="ml-1"),
+            dcc_graph(
+                figure = Plot(traces_original, Layout()),
+                config = Dict(),
+            ),
+        ], className="p-3 my-2 border rounded"),
+        # dbc_container([html_h3("Clustering of governors", id="kmeans_governor_derived"),
+        #     dbc_badge("Line: $(@__LINE__)", color="info", className="ml-1"),
+        #     dcc_graph(
+        #         figure = Plot(traces_derived, Layout()),
+        #         config = Dict(),
+        #     ),
+        # ], className="p-3 my-2 border rounded"),
+    ] 
+
+    app.layout = dbc_container(content)
+
+    run_server(
+        app, 
+        "0.0.0.0", 
+        8055, 
+        debug=true, # enables hot reload and more
+    )
+end
+
 io = stdout
 io = devnull
 
-run_kmeans_governor_gui(io)
+#run_kmeans_governor_gui(io)
+run_kmeans_album_gui(io)
 
 nothing
